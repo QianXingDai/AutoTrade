@@ -1,16 +1,17 @@
 package main.model;
 
 import com.sun.glass.events.KeyEvent;
-import main.Util.Util;
+import main.Util.StockUtil;
+import main.Util.TimeUtil;
 
 import java.awt.*;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
-import static java.lang.Math.round;
-import static main.Util.Util.*;
+import static main.Util.StockUtil.*;
 
 public class Stock {
     public String stockCode;   //  股票代码
@@ -62,6 +63,9 @@ public class Stock {
     public int startDay;        //开始日子
     public boolean isDeal;        //是否已经成交
 
+    private URL url;   //请求url
+    private final StringBuilder sb;   //留给下面update复用,避免大量构造重复对象
+
     public Stock(String stockCode,String dealMethod,String dealNum,String startDate) {
         this.stockCode = stockCode;
         this.dealMethod = dealMethod;
@@ -69,18 +73,19 @@ public class Stock {
         this.startDate = startDate;
         this.startMonth = Integer.parseInt(startDate.substring(0,startDate.indexOf('.')));
         this.startDay = Integer.parseInt(startDate.substring(startDate.indexOf('.') + 1));
-        this.isDeal = false;
+        this.sb = new StringBuilder();
+        try {
+            this.url = new URL("http://hq.sinajs.cn/list=" + (stockCode.charAt(0) == '6' ? "sh" : "sz") + stockCode);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
         update();
     }
 
     //从接口获得数据，然后生成实体类
     public void update(){
-        String address = "http://hq.sinajs.cn/list=" + (stockCode.charAt(0) == '6' ? "sh" : "sz") + stockCode;
-        URL url;
         try {
-            url = new URL(address);
             BufferedReader br = new BufferedReader(new InputStreamReader(url.openStream(), "gbk"));
-            StringBuilder sb = new StringBuilder();
             String contentText;
             String temp;
 
@@ -91,7 +96,11 @@ public class Stock {
 
             String[] vars = contentText.split(",");
 
-            stockName = vars[0].substring(vars[0].indexOf('"') + 1);
+            //股票名称不用每次都赋值，赋值一次就够了
+            if(stockName == null){
+                stockName = vars[0].substring(vars[0].indexOf('"') + 1);
+            }
+
             todayOpenPrice = Float.parseFloat(vars[1]);
             lastDayClosePrice = Float.parseFloat(vars[2]);
             nowPrice = Float.parseFloat(vars[3]);
@@ -126,13 +135,10 @@ public class Stock {
             changeRate = round((nowPrice / lastDayClosePrice - 1) * 100);
             limitUpPrice = round((float) (lastDayClosePrice * 1.1));
 
+            sb.delete(0,sb.length());
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public String getStockCode() {
-        return stockCode;
     }
 
     public boolean soldWay1() {
@@ -199,7 +205,7 @@ public class Stock {
 
     public void buy() {
         try {
-            Robot robot = Util.getRobot();
+            Robot robot = StockUtil.getRobot();
             List<Integer> list = Config.delayTimeList;
 
             shiftProcess(Config.title);
@@ -257,7 +263,7 @@ public class Stock {
             robot.keyRelease(KeyEvent.VK_ENTER);
             robot.delay(list.get(14));
 
-            shiftProcess("");
+            shiftProcess("AutoTrade");
 
         }catch(Exception e){
             e.printStackTrace();
@@ -329,5 +335,16 @@ public class Stock {
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    public boolean isShouldQuery(){
+        return !isDeal && startMonth == TimeUtil.getMonth() && startDay == TimeUtil.getDay();
+    }
+
+    private static float round(float num) {
+        float temp = num * 100;
+        if(temp - Math.floor(temp) >= 0.5)
+            return (float) ((Math.floor(temp) + 1) / 100);
+        return (float) (Math.floor(temp) / 100);
     }
 }

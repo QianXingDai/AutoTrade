@@ -15,6 +15,8 @@ public class MainView {
     private JTextArea textArea1;
     private JTextArea textArea2;
     private JLabel[] labels;
+    private int len1;
+    private int len2;
 
     public static void main(String[] args) {
         MainView mainView = new MainView();
@@ -89,21 +91,41 @@ public class MainView {
         btnStart.setBounds(10, 490, 511, 35);
         frame.getContentPane().add(btnStart);
 
-        btnStart.addActionListener(e -> start());
+        btnStart.addActionListener(e -> {
+            btnStart.setText("已启动");
+            start();
+        });
 
-        for(int i = 0; i < stockList.size(); i++) {
-            Stock stock = stockList.get(i);
-            labels[i * 5] = new JLabel(stock.getStockCode());
-            labels[i * 5 + 1] = new JLabel(stock.dealMethod);
-            labels[i * 5 + 2] = new JLabel(stock.dealNum);
-            labels[i * 5 + 3] = new JLabel("未成交");
-            labels[i * 5 + 4] = new JLabel(stock.startDate);
+        if(stockList.size() > 0){
+            print("  读取股票信息成功\n",2);
+            for(int i = 0; i < stockList.size(); i++) {
+                Stock stock = stockList.get(i);
 
-            panelBottom.add(labels[i * 5]);
-            panelBottom.add(labels[i * 5 + 1]);
-            panelBottom.add(labels[i * 5 + 2]);
-            panelBottom.add(labels[i * 5 + 3]);
-            panelBottom.add(labels[i * 5 + 4]);
+                if(stock.isShouldQuery()){
+                    print("  " + stock.stockName + " (查询中)\n",2);
+                }else{
+                    print("  " + stock.stockName + " (未到开始日期,停止查询)\n",2);
+                }
+                labels[i * 5] = new JLabel(stock.stockCode);
+                labels[i * 5 + 1] = new JLabel(stock.dealMethod);
+                labels[i * 5 + 2] = new JLabel(stock.dealNum);
+                labels[i * 5 + 3] = new JLabel("未成交");
+                labels[i * 5 + 4] = new JLabel(stock.startDate);
+
+                panelBottom.add(labels[i * 5]);
+                panelBottom.add(labels[i * 5 + 1]);
+                panelBottom.add(labels[i * 5 + 2]);
+                panelBottom.add(labels[i * 5 + 3]);
+                panelBottom.add(labels[i * 5 + 4]);
+            }
+        }else{
+            print("  读取股票信息失败或信息为空\n",2);
+        }
+
+        if(mainPresenter.getDelayTimeList() != null && mainPresenter.getDelayTimeList().size() > 0){
+            print("  读取配置信息成功\n",2);
+        }else{
+            print("  读取配置信息失败,请检查配置文件重试!\n",2);
         }
 
         //这一句必须放在最后面，用来刷新界面
@@ -119,11 +141,13 @@ public class MainView {
 
     synchronized public void print(String s,int flag){
         if(flag == 1){
+            len1 += s.length();
             textArea1.append(s);
-            textArea1.setCaretPosition(textArea2.getText().length());
+            textArea1.setCaretPosition(len1);
         }else{
+            len2 += s.length();
             textArea2.append(s);
-            textArea2.setCaretPosition(textArea2.getText().length());
+            textArea2.setCaretPosition(len2);
         }
     }
 
@@ -133,6 +157,7 @@ public class MainView {
 
     public void clearOutput(){
         textArea1.setText("");
+        len1 = 0;
     }
 
 }

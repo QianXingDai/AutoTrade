@@ -1,9 +1,9 @@
 package main.Presenter;
 
-import main.Util.Util;
+import main.Util.StockUtil;
+import main.Util.TimeUtil;
 import main.View.MainView;
 import main.model.Config;
-import main.model.MyTime;
 import main.model.Stock;
 
 import java.awt.*;
@@ -15,7 +15,6 @@ public class MainPresenter {
     public static final int BUY = 2;
 
     private final MainView mainView;
-    private Config config;
     private List<Integer> delayTimeList;
     private List<Stock> stockList;
     private int dealCount;
@@ -23,25 +22,30 @@ public class MainPresenter {
 
     public MainPresenter(MainView mainView) {
         this.mainView = mainView;
-        robot = Util.getRobot();
+        this.robot = StockUtil.getRobot();
     }
 
     public void start(){
         new Thread(()->{
             while (dealCount < stockList.size()){
                 robot.delay(delayTimeList.get(14));
-                if(!MyTime.isRightTime()){
+
+                //判断是否在有效时间段内
+                if(!TimeUtil.isRightTime()){
                     mainView.print("     还没到时间哟 ， 时间到了会自动执行哒\n",1);
                     continue;
                 }
-                if(MyTime.isNeedClearOutput()){
+
+                //是否需要清除信息框输出，太长时间不清除会卡死，建议1小时内清除一次
+                if(TimeUtil.isNeedClearOutput()){
                     mainView.clearOutput();
                 }
                 for(int i = 0; i < stockList.size(); i++){
                     Stock stock = stockList.get(i);
+                    stock.update();
 
-                    if(!stock.isDeal && stock.startMonth == MyTime.month && stock.startDay == MyTime.day){
-                        mainView.print("   " + stock.stockName + " (" + stock.stockCode + ") 现价 : " + stock.nowPrice + "  ---- " + MyTime.time + "\r\n",1);
+                    if(stock.isShouldQuery()){
+                        mainView.print("   " + stock.stockName + " (" + stock.stockCode + ") 现价 : " + stock.nowPrice + "  ---- " + TimeUtil.getTime() + "\r\n",1);
 
                         switch (stock.dealMethod){
                             case "s1" : {
@@ -108,7 +112,6 @@ public class MainPresenter {
                         }
                     }
                 }
-
             }
         }).start();
     }
@@ -124,21 +127,21 @@ public class MainPresenter {
         }
         dealCount++;
         stock.isDeal = true;
-        mainView.print(s + " : " + stock.stockName + "  ---  " + MyTime.time + "\r\n", 2);
+        mainView.print(s + " : " + stock.stockName + "  ---  " + TimeUtil.getTime() + "\r\n", 2);
         mainView.updateLabel(index * 5 + 3);
     }
 
     public void initData(){
-        config = new Config();
+        Config.init();
         stockList = Config.stockList;
         delayTimeList = Config.delayTimeList;
     }
 
-    public Config getConfig() {
-        return config;
-    }
-
     public List<Stock> getStockList() {
         return stockList;
+    }
+
+    public List<Integer> getDelayTimeList() {
+        return delayTimeList;
     }
 }

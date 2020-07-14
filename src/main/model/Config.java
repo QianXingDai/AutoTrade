@@ -9,20 +9,18 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static main.Util.Util.isInteger;
-
 public class Config {
 
     public static List<Integer> delayTimeList;
     public static List<Stock> stockList;
     public static String title;
 
-    public Config() {
+    public static void init(){
         loadSettingConfig();
         loadStockConfig();
     }
 
-    private void loadSettingConfig(){
+    private static void loadSettingConfig(){
         if(delayTimeList == null){
             delayTimeList = new ArrayList<>();
         }
@@ -62,7 +60,7 @@ public class Config {
         }
     }
 
-    private void loadStockConfig(){
+    private static void loadStockConfig(){
         if(stockList == null){
             stockList = new ArrayList<>();
         }
@@ -78,9 +76,6 @@ public class Config {
                 Stock stock = new Stock(ss[0],ss[1],ss[2],ss[3]);
                 stockList.add(stock);
             }
-
-            br.close();
-
         }catch(Exception e) {
             e.printStackTrace();
         }finally {
@@ -91,5 +86,10 @@ public class Config {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static boolean isInteger(String s){
+        Pattern pattern = Pattern.compile("^[-\\+]?[\\d]*$");
+        return pattern.matcher(s).matches();
     }
 }
