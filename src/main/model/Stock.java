@@ -1,6 +1,5 @@
-package main.model.bean;
+package main.model;
 
-import main.model.TradeMethod;
 import main.util.StockUtil;
 import main.util.TimeUtil;
 import okhttp3.Request;
@@ -139,6 +138,9 @@ public class Stock {
 
 
     public boolean isShouldQuery(){
+        if (Config.INSTANCE.isDebugMode){
+            return true;
+        }
         return !isDeal && startMonth == TimeUtil.getMonth() && startDay == TimeUtil.getDay();
     }
 }

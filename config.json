@@ -1,0 +1,25 @@
+{
+	"afterSwitchToTradeProgramDelay": "1000",
+	"afterF1PressedDelay": "1000",
+	"afterF2PressedDelay": "1000",
+	"stockCodeNumberInputDelay": "100",
+	"afterStockCodeNumberInputDelay": "200",
+	"afterSwitchToTradePriceTABDelay": "500",
+	"afterDeletePriceDelay": "500",
+	"afterInputPriceDelay": "500",
+	"afterSwitchToTradeNumberTABDelay": "500",
+	"afterInputTradeNUmberDelay": "500",
+	"afterSwitchToTradeButtonDelay": "500",
+	"afterTradeButtonPressedDelay": "500",
+	"afterConfirmTradeButtonPressedDelay": "500",
+	"afterLastEnterDelay": "1500",
+	"latestInfoIntervals": "3000",
+	"clearOutputAreaIntervals": "1800000",
+	"longPressTabTime": "100",
+                "isDebugMode": "true",
+
+	"tradeNameList": [{
+		"name": "网上股票交易系统5.0"
+	}]
+
+}

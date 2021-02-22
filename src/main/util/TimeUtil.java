@@ -1,4 +1,4 @@
-package main.Util;
+package main.util;
 
 import main.model.Config;
 
@@ -18,6 +18,10 @@ public class TimeUtil {
 
     public static boolean isRightTime(){
         updateTime();
+        if (Config.INSTANCE.isDebugMode){
+            return true;
+        }
+
 
         //只在9:15 - 11:30,13:00 - 15:00内执行
         if(hour >= 9 && hour != 12 && hour <= 15){
@@ -46,7 +50,7 @@ public class TimeUtil {
     }
 
     public static boolean isNeedClearOutput(){
-        if(System.currentTimeMillis() - startTime >= Config.delayTimeList.get(15)){
+        if(System.currentTimeMillis() - startTime >= Config.INSTANCE.delay.clearOutputAreaIntervals){
             startTime = System.currentTimeMillis();
             return true;
         }

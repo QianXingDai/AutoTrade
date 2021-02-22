@@ -1,6 +1,6 @@
-package main.View;
+package main.view;
 
-import main.Presenter.MainPresenter;
+import main.presenter.MainPresenter;
 import main.model.Stock;
 
 import javax.swing.*;
@@ -9,9 +9,12 @@ import java.util.List;
 
 public class MainView {
 
+    public enum OutputArea{
+        LEFT_AREA,RIGHT_AREA;
+    }
+
     private MainPresenter mainPresenter;
     private List<Stock> stockList;
-    private boolean isRunning;
     private JTextArea textArea1;
     private JTextArea textArea2;
     private JLabel[] labels;
@@ -27,7 +30,6 @@ public class MainView {
     }
 
     private void initData(){
-        mainPresenter.initData();
         stockList = mainPresenter.getStockList();
     }
 
@@ -97,17 +99,17 @@ public class MainView {
         });
 
         if(stockList.size() > 0){
-            print("  读取股票信息成功\n",2);
+            print("  读取股票信息成功\n",OutputArea.RIGHT_AREA);
             for(int i = 0; i < stockList.size(); i++) {
                 Stock stock = stockList.get(i);
 
                 if(stock.isShouldQuery()){
-                    print("  " + stock.stockName + " (查询中)\n",2);
+                    print("  " + stock.stockName + " (查询中)\n",OutputArea.RIGHT_AREA);
                 }else{
-                    print("  " + stock.stockName + " (未到开始日期,停止查询)\n",2);
+                    print("  " + stock.stockName + " (未到开始日期,停止查询)\n",OutputArea.RIGHT_AREA);
                 }
                 labels[i * 5] = new JLabel(stock.stockCode);
-                labels[i * 5 + 1] = new JLabel(stock.dealMethod);
+                labels[i * 5 + 1] = new JLabel(String.valueOf(stock.tradeMethod));
                 labels[i * 5 + 2] = new JLabel(stock.dealNum);
                 labels[i * 5 + 3] = new JLabel("未成交");
                 labels[i * 5 + 4] = new JLabel(stock.startDate);
@@ -119,13 +121,13 @@ public class MainView {
                 panelBottom.add(labels[i * 5 + 4]);
             }
         }else{
-            print("  读取股票信息失败或信息为空\n",2);
+            print("  读取股票信息失败或信息为空\n",OutputArea.RIGHT_AREA);
         }
 
-        if(mainPresenter.getDelayTimeList() != null && mainPresenter.getDelayTimeList().size() > 0){
-            print("  读取配置信息成功\n",2);
+        if(mainPresenter.isSuccessLoadConfig()){
+            print("  读取配置信息成功\n",OutputArea.RIGHT_AREA);
         }else{
-            print("  读取配置信息失败,请检查配置文件重试!\n",2);
+            print("  读取配置信息失败,请检查配置文件重试!\n",OutputArea.RIGHT_AREA);
         }
 
         //这一句必须放在最后面，用来刷新界面
@@ -133,31 +135,27 @@ public class MainView {
     }
 
     private void start(){
-        if(!isRunning){
-            mainPresenter.start();
-            isRunning = true;
-        }
+        mainPresenter.start();
     }
 
-    synchronized public void print(String s,int flag){
-        if(flag == 1){
+    synchronized public void print(String s,OutputArea outputArea){
+        if(outputArea == OutputArea.LEFT_AREA){
             len1 += s.length();
             textArea1.append(s);
             textArea1.setCaretPosition(len1);
-        }else{
+        }else if (outputArea == OutputArea.RIGHT_AREA){
             len2 += s.length();
             textArea2.append(s);
             textArea2.setCaretPosition(len2);
         }
     }
 
-    public void updateLabel(int index){
+    synchronized public void updateLabel(int index){
         labels[index].setText("已成交");
     }
 
-    public void clearOutput(){
+    synchronized public void clearOutput(){
         textArea1.setText("");
         len1 = 0;
     }
-
 }

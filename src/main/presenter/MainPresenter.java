@@ -1,38 +1,53 @@
-package main.Presenter;
+package main.presenter;
 
-import main.Util.StockUtil;
-import main.Util.TimeUtil;
-import main.View.MainView;
 import main.model.Config;
 import main.model.Stock;
+import main.util.StockUtil;
+import main.util.TimeUtil;
+import main.view.MainView;
 
 import java.awt.*;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainPresenter {
 
-    public static final int SOLD = 1;
-    public static final int BUY = 2;
+    public static final int MAX_THREAD_NUM = 3;
 
     private final MainView mainView;
-    private List<Integer> delayTimeList;
-    private List<Stock> stockList;
-    private int dealCount;
     private final Robot robot;
+    private final Queue<Stock> stockQueue;
+    private final Queue<Stock> tradeStockQueue;
+    private final Config config;
+    private boolean isRunning;
 
     public MainPresenter(MainView mainView) {
         this.mainView = mainView;
         this.robot = StockUtil.getRobot();
+        this.stockQueue = new LinkedList<>();
+        this.tradeStockQueue = new LinkedList<>();
+        config = Config.INSTANCE;
+        stockQueue.addAll(config.stockList);
     }
 
     public void start(){
-        new Thread(()->{
-            while (dealCount < stockList.size()){
-                robot.delay(delayTimeList.get(14));
+        if (isRunning){
+            return;
+        }
+        isRunning = true;
+        ExecutorService executor = Executors.newScheduledThreadPool(MAX_THREAD_NUM);
+
+        //不断从还没成交的队列中进行查询,满足交易条件就加入交易队列
+        executor.execute(()->{
+            while (!stockQueue.isEmpty()){
+                robot.delay(config.delay.latestInfoIntervals);
 
                 //判断是否在有效时间段内
                 if(!TimeUtil.isRightTime()){
-                    mainView.print("     还没到时间哟 ， 时间到了会自动执行哒\n",1);
+                    mainView.print("     还没到时间哟 ， 时间到了会自动执行哒\n", MainView.OutputArea.LEFT_AREA);
                     continue;
                 }
 
@@ -40,108 +55,52 @@ public class MainPresenter {
                 if(TimeUtil.isNeedClearOutput()){
                     mainView.clearOutput();
                 }
-                for(int i = 0; i < stockList.size(); i++){
-                    Stock stock = stockList.get(i);
-                    stock.update();
 
-                    if(stock.isShouldQuery()){
-                        mainView.print("   " + stock.stockName + " (" + stock.stockCode + ") 现价 : " + stock.nowPrice + "  ---- " + TimeUtil.getTime() + "\r\n",1);
+                Stock stock = stockQueue.poll();
+                assert stock != null;
+                stock.update();
 
-                        switch (stock.dealMethod){
-                            case "s1" : {
-                                if(stock.soldWay1()){
-                                    trade(stock,i,SOLD);
-                                }
-                                break;
-                            }
-                            case "s2" : {
-                                if(stock.soldWay2()){
-                                    trade(stock,i,SOLD);
-                                }
-                                break;
-                            }
-                            case "s3" : {
-                                if(stock.soldWay3()){
-                                    trade(stock,i,SOLD);
-                                }
-                                break;
-                            }
-                            case "s4" : {
-                                if(stock.soldWay4()){
-                                    trade(stock,i,SOLD);
-                                }
-                                break;
-                            }
-                            case "s5" : {
-                                if(stock.soldWay5()){
-                                    trade(stock,i,SOLD);
-                                }
-                                break;
-                            }
-                            case "b1" : {
-                                if(stock.buyWay1()){
-                                    trade(stock,i,BUY);
-                                }
-                                break;
-                            }
-                            case "b2" : {
-                                if(stock.buyWay2()){
-                                    trade(stock,i,BUY);
-                                }
-                                break;
-                            }
-                            case "b3" : {
-                                if(stock.buyWay3()){
-                                    trade(stock,i,BUY);
-                                }
-                                break;
-                            }
-                            case "b4" : {
-                                if(stock.buyWay4()){
-                                    trade(stock,i,BUY);
-                                }
-                                break;
-                            }
-                            case "b5" : {
-                                if(stock.buyWay5()){
-                                    trade(stock,i,BUY);
-                                }
-                                break;
-                            }
-                            default:break;
+                if(stock.isShouldQuery()){
+                    mainView.print("   " + stock.stockName + " (" + stock.stockCode + ") 现价 : " + stock.nowPrice + "  ---- " + TimeUtil.getTime() + "\r\n", MainView.OutputArea.LEFT_AREA);
+                    if (StockUtil.checkIfShouldTrade(stock)){
+                        synchronized (tradeStockQueue){
+                            tradeStockQueue.add(stock);
                         }
+                    }else{
+                        stockQueue.add(stock);
                     }
                 }
             }
-        }).start();
-    }
+        });
 
-    private void trade(Stock stock,int index,int flag) {
-        String s = null;
-        if (flag == SOLD) {
-            s = "卖出";
-            stock.sold();
-        } else if (flag == BUY) {
-            s = "买入";
-            stock.buy();
-        }
-        dealCount++;
-        stock.isDeal = true;
-        mainView.print(s + " : " + stock.stockName + "  ---  " + TimeUtil.getTime() + "\r\n", 2);
-        mainView.updateLabel(index * 5 + 3);
-    }
-
-    public void initData(){
-        Config.init();
-        stockList = Config.stockList;
-        delayTimeList = Config.delayTimeList;
+        //不断从要交易的股票队列中取出对象进行交易操作
+        executor.execute(() -> {
+            while (!tradeStockQueue.isEmpty() || !stockQueue.isEmpty()){
+                Stock stock;
+                synchronized (tradeStockQueue){
+                    stock = tradeStockQueue.poll();
+                }
+                if (stock != null){
+                    if (stock.isBuy){
+                        StockUtil.buy(stock);
+                    }else{
+                        StockUtil.sold(stock);
+                    }
+                    stock.isDeal = true;
+                    String s = "";
+                    mainView.print(s + " : " + stock.stockName + "  ---  " + TimeUtil.getTime() + "\r\n", MainView.OutputArea.RIGHT_AREA);
+                    mainView.updateLabel(stock.index * 5 + 3);
+                }
+            }
+            executor.shutdown();
+        });
     }
 
     public List<Stock> getStockList() {
-        return stockList;
+        return Config.INSTANCE.stockList;
     }
 
-    public List<Integer> getDelayTimeList() {
-        return delayTimeList;
+    public boolean isSuccessLoadConfig() {
+        return Config.INSTANCE.delay != null;
     }
 }
